@@ -1,0 +1,9 @@
+group 'net.halcyxn.nala'
+version '0.1.0'
+
+allprojects {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+}
