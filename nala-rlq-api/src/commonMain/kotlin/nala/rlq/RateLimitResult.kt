@@ -5,7 +5,7 @@ sealed class RateLimitResult<TData> {
 
     abstract val rateLimit: RateLimitData?
 
-    data class Success<TData>(val data: TData, override val rateLimit: RateLimitData) : RateLimitResult<TData>()
+    data class Success<TData>(val data: TData, override val rateLimit: RateLimitData?) : RateLimitResult<TData>()
 
     sealed class Failure<TData> : RateLimitResult<TData>() {
 

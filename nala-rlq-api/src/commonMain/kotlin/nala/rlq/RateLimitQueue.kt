@@ -18,8 +18,26 @@ import nala.rlq.retry.Retry
 interface RateLimitQueue {
 
     /**
-     * Submits the scheduled [task] to this queue with the specified [retry] and [backoff] strategies.
-     * The returned [Deferred] may be cancelled to remove the task from this queue.
+     * Submits the [task] to this queue with the specified [retry] and [backoff] strategies,
+     * suspends until completion, and returns its result or throws the corresponding exception if the task failed.
+     *
+     * This suspending function is cancellable.
+     * If the [Job] of the current coroutine is cancelled or completed while this suspending function is waiting,
+     * this function will immediately resume with [CancellationException]
+     * and the task will be cancelled and removed from this queue.
+     *
+     * @param retry the retry instance.
+     *  If it is `null`, the task will never be resubmitted.
+     * @param backoff the backoff strategy.
+     *  If it is `null`, in the event of a retry the task will be resubmitted immediately.
+     *
+     * @return the result of the [task].
+     */
+    suspend fun <TData> submit(task: RateLimitTask<TData>, retry: Retry? = null, backoff: Backoff? = null): TData
+
+    /**
+     * Submits the [task] to this queue with the specified [retry] and [backoff] strategies.
+     * The returned [Deferred] may be cancelled to cancel the task and remove it from this queue.
      *
      * @param retry the retry instance.
      *  If it is `null`, the task will never be resubmitted.
@@ -30,30 +48,7 @@ interface RateLimitQueue {
      */
     fun <TData> submitAsync(task: RateLimitTask<TData>, retry: Retry? = null, backoff: Backoff? = null): Deferred<TData>
 
-    /**
-     * Submits the scheduled [task] to this queue with the specified [retry] and [backoff] strategies,
-     * and suspends until the task is completed.
-     *
-     * This suspending function is cancellable.
-     * If the [Job] of the current coroutine is cancelled or completed while this suspending function is waiting,
-     * this function will immediately resume with [CancellationException] and the task will be removed from this queue.
-     *
-     * @param retry the retry instance.
-     *  If it is `null`, the task will never be resubmitted.
-     * @param backoff the backoff strategy.
-     *  If it is `null`, in the event of a retry the task will be resubmitted immediately.
-     *
-     * @return the result of the [task].
-     * @throws Exception the exception thrown by the [task],
-     *  if it fails and the retry strategy does not allow it to be resubmitted.
-     *
-     * @see submitAsync
-     */
-    suspend fun <TData> submit(task: RateLimitTask<TData>, retry: Retry? = null, backoff: Backoff? = null): TData
-
-    /**
-     * Closes this rate-limit queue and cancels all queued tasks.
-     */
+    /** Closes this rate-limit queue and cancels all queued tasks. */
     fun dispose()
 
 }
