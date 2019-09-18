@@ -15,6 +15,25 @@ apply plugin: 'kotlinx-atomicfu'
 apply plugin: 'maven-publish'
 apply plugin: 'java'
 
+tasks.withType(AbstractTestTask) {
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+    afterSuite { desc, result ->
+        if (!desc.parent) {
+            println "-" * 80
+            println "Test results: ${result.resultType} " +
+                    "(" +
+                    "${result.testCount} tests, " +
+                    "${result.successfulTestCount} successful, " +
+                    "${result.failedTestCount} failed, " +
+                    "${result.skippedTestCount} skipped" +
+                    ")"
+        }
+    }
+}
+
 kotlin {
     jvm { withJava() }
     js {

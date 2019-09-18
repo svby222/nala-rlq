@@ -1,5 +1,9 @@
 package util
 
+import kotlin.test.Ignore
+
+actual typealias PlatformIgnore = Ignore
+
 actual inline fun runTest(crossinline block: suspend () -> Unit): Unit =
         console.error(
                 "Unfortunately, Kotlin does not yet support suspending tests, " +

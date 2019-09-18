@@ -4,6 +4,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import nala.rlq.backoff.Backoff
+import nala.rlq.internal.Disposable
 import nala.rlq.retry.Retry
 
 /**
@@ -15,7 +16,7 @@ import nala.rlq.retry.Retry
  * the rate limit should be reevaluated and the task rescheduled at a later time.
  */
 @ExperimentalRateLimitApi
-interface RateLimitQueue {
+interface RateLimitQueue : Disposable {
 
     /**
      * Submits the [task] to this queue with the specified [retry] and [backoff] strategies,
@@ -48,7 +49,13 @@ interface RateLimitQueue {
      */
     fun <TData> submitAsync(task: RateLimitTask<TData>, retry: Retry? = null, backoff: Backoff? = null): Deferred<TData>
 
-    /** Closes this rate-limit queue and cancels all queued tasks. */
-    fun dispose()
+    /**
+     * Closes this rate-limit queue and cancels all queued tasks.
+     *
+     * This function is idempotent;
+     * multiple attempts to dispose the same queue have no effect,
+     * unless documented as such.
+     */
+    override fun dispose()
 
 }

@@ -18,7 +18,7 @@ import nala.rlq.SuspendingTask
  * @see RateLimitQueue
  */
 @ExperimentalRateLimitApi
-internal interface TaskDispatcher {
+internal interface TaskDispatcher : Disposable {
 
     /**
      * Submits the [task] for execution to this dispatcher, suspends until completion,
@@ -40,7 +40,13 @@ internal interface TaskDispatcher {
      */
     fun <T> submitAsync(task: SuspendingTask<T>): Deferred<T>
 
-    /** Closes this task dispatcher and cancels all tasks. */
-    fun dispose()
+    /**
+     * Closes this task dispatcher and cancels all tasks.
+     *
+     * This function is idempotent;
+     * multiple attempts to dispose the same queue have no effect,
+     * unless documented as such.
+     */
+    override fun dispose()
 
 }
