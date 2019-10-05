@@ -1,4 +1,4 @@
-package util
+package nala.common.test
 
 import kotlin.test.Ignore
 

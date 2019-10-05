@@ -1,4 +1,4 @@
-package util
+package nala.common.test
 
 /**
  * Marks a function as a test.

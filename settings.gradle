@@ -3,3 +3,4 @@ enableFeaturePreview('GRADLE_METADATA')
 rootProject.name = "nala-rlq"
 
 include "nala-rlq-api"
+include "nala-common-test"
