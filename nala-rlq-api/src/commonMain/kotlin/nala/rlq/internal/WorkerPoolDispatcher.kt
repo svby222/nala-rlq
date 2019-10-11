@@ -11,9 +11,9 @@ import nala.rlq.SuspendingTask
  * @param workers the amount of worker coroutines to start
  */
 @ExperimentalRateLimitApi
-internal class WorkerPoolDispatcher(workers: Int) : TaskDispatcher {
+internal class WorkerPoolDispatcher(workers: Int, parentJob: Job? = null) : TaskDispatcher {
 
-    private val poolJob = SupervisorJob()
+    private val poolJob = SupervisorJob(parentJob)
     private val scope = CoroutineScope(Dispatchers.Default + poolJob)
     private val queue = Channel<Pair<SuspendingTask<*>, CompletableDeferred<*>>>(Channel.RENDEZVOUS)
 
