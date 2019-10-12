@@ -98,7 +98,7 @@ class CoroutineRateLimitQueue(scope: CoroutineScope, val workers: Int) : RateLim
             while (true) {
                 val data = this.data.value
 
-                if (data.remaining != 0) {
+                if (data.remaining > 0) {
                     // Dispatch now
                     try {
                         return dispatcher.submit(task)
