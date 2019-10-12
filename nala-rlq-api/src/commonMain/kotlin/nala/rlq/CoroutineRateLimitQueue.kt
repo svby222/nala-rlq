@@ -14,7 +14,11 @@ import nala.rlq.retry.Retry
 /**
  * An implementation of [RateLimitQueue] that internally delegates to a coroutine-based worker pool.
  *
- * @param workers the amount of worker coroutines to launch
+ * Each bucket is internally assigned a task queue,
+ * from which queued tasks are consumed and dispatched to a shared pool of [workers] worker coroutines.
+ * All buckets are executed in parallel, whereas tasks within a given bucket are executed sequentially.
+ *
+ * @param workers the amount of shared worker coroutines to launch
  */
 @ExperimentalRateLimitApi
 class CoroutineRateLimitQueue(scope: CoroutineScope, val workers: Int) : RateLimitQueue {
