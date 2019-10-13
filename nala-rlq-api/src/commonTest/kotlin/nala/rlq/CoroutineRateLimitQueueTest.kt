@@ -2,9 +2,9 @@ package nala.rlq
 
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import nala.common.internal.currentTimeMillis
 import nala.common.test.PlatformIgnore
 import nala.common.test.runTest
-import nala.rlq.internal.currentTimeMillis
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -28,7 +28,7 @@ class CoroutineRateLimitQueueTest {
             println("Completed task ${index + 1}")
             index++
         }
-                .map { RateLimitResult.Success(it, RateLimitData(now, false, 4 - (it % 5), now + delay + delay * (it / 5))) }
+                .map { RateLimitResult.Success(it, RateLimitData(now, false, 4 - it % 5, now + delay * (1 + it / 5))) }
                 .withBucket()
 
         repeat(11) { queue.submit(task) }

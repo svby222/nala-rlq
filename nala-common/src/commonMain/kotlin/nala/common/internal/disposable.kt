@@ -1,9 +1,9 @@
-package nala.rlq.internal
+package nala.common.internal
 
 import kotlinx.coroutines.CoroutineScope
 
 /**
- * An interface representing an object with a lifetime (i.e. a [scope][CoroutineScope])
+ * An interface representing an object with a lifetime (i.e. a [CoroutineScope])
  * that can be manually disposed.
  */
 interface Disposable {

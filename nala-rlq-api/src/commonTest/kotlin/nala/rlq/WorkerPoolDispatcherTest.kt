@@ -4,11 +4,11 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import nala.common.internal.use
 import nala.common.test.PlatformIgnore
 import nala.common.test.runTest
 import nala.rlq.internal.TaskDispatcher
 import nala.rlq.internal.WorkerPoolDispatcher
-import nala.rlq.internal.use
 import kotlin.random.Random
 import kotlin.test.*
 

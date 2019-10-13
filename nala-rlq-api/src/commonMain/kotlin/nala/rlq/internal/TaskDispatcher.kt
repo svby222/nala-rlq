@@ -3,6 +3,7 @@ package nala.rlq.internal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import nala.common.internal.Disposable
 import nala.rlq.ExperimentalRateLimitApi
 import nala.rlq.RateLimitQueue
 import nala.rlq.RateLimitTask

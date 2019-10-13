@@ -3,8 +3,8 @@ package nala.rlq
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import nala.common.internal.Disposable
 import nala.rlq.backoff.Backoff
-import nala.rlq.internal.Disposable
 import nala.rlq.retry.Retry
 
 /**

@@ -6,9 +6,9 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import nala.common.internal.currentTimeMillis
 import nala.rlq.backoff.Backoff
 import nala.rlq.internal.WorkerPoolDispatcher
-import nala.rlq.internal.currentTimeMillis
 import nala.rlq.retry.Retry
 
 /**

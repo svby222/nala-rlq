@@ -19,7 +19,6 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation project(':nala-common')
                 implementation kotlin('stdlib-common')
                 implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$kotlinxCoroutinesVersion"
                 implementation "org.jetbrains.kotlinx:atomicfu-common:$atomicfuVersion"
@@ -27,7 +26,6 @@ kotlin {
         }
         commonTest {
             dependencies {
-                implementation project(':nala-common-test')
                 implementation kotlin('test-common')
                 implementation kotlin('test-annotations-common')
                 implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$kotlinxCoroutinesVersion"
@@ -35,7 +33,6 @@ kotlin {
         }
         jvmMain {
             dependencies {
-                implementation project(':nala-common')
                 implementation kotlin('stdlib-jdk8')
                 implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion"
                 implementation "org.jetbrains.kotlinx:atomicfu:$atomicfuVersion"
@@ -50,6 +47,7 @@ kotlin {
         }
         jsMain {
             dependencies {
+                implementation kotlin('stdlib-js')
                 implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$kotlinxCoroutinesVersion"
                 implementation "org.jetbrains.kotlinx:atomicfu-js:$atomicfuVersion"
             }
