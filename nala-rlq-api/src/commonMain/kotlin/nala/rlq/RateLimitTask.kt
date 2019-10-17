@@ -1,8 +1,11 @@
 package nala.rlq
 
 /**
- * An interface representing a [SuspendingTask] that returns a [RateLimitResult]
+ * An interface representing a [SuspendingTask] with an assigned [bucket] that returns a [RateLimitResult]
  * to provide rate-limit data to a [RateLimitQueue] upon completion.
+ *
+ * As implementations of [RateLimitQueue] may use hash tables to group tasks,
+ * task [bucket identifiers][RateLimitTask.bucket] should have a sensible [hashCode] implementation.
  */
 @ExperimentalRateLimitApi
 interface RateLimitTask<TData> : SuspendingTask<RateLimitResult<TData>> {
@@ -15,8 +18,11 @@ interface RateLimitTask<TData> : SuspendingTask<RateLimitResult<TData>> {
     object GlobalBucket
 
     /**
-     * The rate-limit bucket this task is associated with.
-     * This is used to group tasks that share the same rate-limit.
+     * The rate-limit bucket this task is associated with, used to group tasks that share the same rate-limit.
+     *
+     * As implementations of [RateLimitQueue] may use hash tables to group tasks,
+     * task [bucket identifiers][RateLimitTask.bucket] should have a sensible [hashCode] implementation.
+     *
      * @see GlobalBucket
      */
     val bucket: Any

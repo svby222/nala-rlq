@@ -6,7 +6,7 @@ import nala.rlq.ExperimentalRateLimitApi
 import nala.rlq.SuspendingTask
 
 /**
- * An implementation of [TaskDispatcher] that submits tasks to a fixed number of worker coroutines.
+ * An implementation of [TaskDispatcher] that dispatches tasks to a fixed number of worker coroutines.
  *
  * @param workers the amount of worker coroutines to start
  */

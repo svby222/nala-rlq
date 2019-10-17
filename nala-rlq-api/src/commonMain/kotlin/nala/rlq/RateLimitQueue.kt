@@ -14,6 +14,9 @@ import nala.rlq.retry.Retry
  * i.e. if a task has been queued for execution and the queue receives newer rate-limit information
  * that would disallow the task from completing at the scheduled time,
  * the rate limit should be reevaluated and the task rescheduled at a later time.
+ *
+ * As implementations of this class may use hash tables to group tasks,
+ * task [bucket identifiers][RateLimitTask.bucket] should have a sensible [hashCode] implementation.
  */
 @ExperimentalRateLimitApi
 interface RateLimitQueue : Disposable {

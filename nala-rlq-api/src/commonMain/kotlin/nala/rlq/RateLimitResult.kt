@@ -12,14 +12,12 @@ package nala.rlq
 @ExperimentalRateLimitApi
 sealed class RateLimitResult<in TData> {
 
-    /**
-     * The rate-limit information associated with this result.
-     */
+    /** The rate-limit information associated with this result. */
     abstract val rateLimit: RateLimitData?
 
     /**
      * A [RateLimitResult] representing success.
-     * Contains [data][RateLimitResult.Success.data] of type [TData] and optional [RateLimitData].
+     * Contains [data] of type [TData] and optional [RateLimitData].
      *
      * @see RateLimitResult
      */
@@ -34,7 +32,7 @@ sealed class RateLimitResult<in TData> {
 
         /**
          * A [RateLimitResult] representing a failure due to an exception.
-         * Contains an [exception][Failure.Exception.exception] and optional [RateLimitData].
+         * Contains an [exception] and optional [RateLimitData].
          *
          * @see RateLimitResult
          */
