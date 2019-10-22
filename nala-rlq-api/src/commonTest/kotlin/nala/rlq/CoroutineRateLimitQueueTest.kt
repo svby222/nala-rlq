@@ -5,6 +5,8 @@ import nala.common.internal.currentTimeMillis
 import nala.common.internal.use
 import nala.common.test.PlatformIgnore
 import nala.common.test.runTest
+import nala.rlq.retry.CounterRetry
+import nala.rlq.retry.InfiniteRetry
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -50,6 +52,21 @@ class CoroutineRateLimitQueueTest {
             repeat(4) { queue.submit(task) }
             assertEquals(0, host.violations)
         }
+    }
+
+    @[Test PlatformIgnore]
+    fun testDisposeCleanup() = runTest {
+        val host = MockRateLimitHost(maxRequests = 1, interval = 99999L)
+        val task = suspendingTask { host.request() }.withBucket(RateLimitTask.GlobalBucket)
+
+        val queue = CoroutineRateLimitQueue(this, 4)
+        
+        task()
+
+        val futures = List(3) { queue.submitAsync(task, CounterRetry(1)) }
+        queue.dispose()
+
+        assertTrue(futures.all { it.isCancelled })
     }
 
 }
