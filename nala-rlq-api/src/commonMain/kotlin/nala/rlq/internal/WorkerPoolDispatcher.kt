@@ -9,6 +9,7 @@ import nala.rlq.SuspendingTask
  * An implementation of [TaskDispatcher] that dispatches tasks to a fixed number of worker coroutines.
  *
  * @param workers the amount of worker coroutines to start
+ * @param parentJob the parent for this dispatcher's [CoroutineScope]
  */
 @ExperimentalRateLimitApi
 internal class WorkerPoolDispatcher(workers: Int, parentJob: Job? = null) : TaskDispatcher {
@@ -21,7 +22,7 @@ internal class WorkerPoolDispatcher(workers: Int, parentJob: Job? = null) : Task
         require(workers > 0) { "workers must be positive" }
 
         repeat(workers) { i ->
-            scope.launch(context = CoroutineName("WorkerPoolDispatcher#$i")) {
+            scope.launch(context = CoroutineName("WorkerPoolDispatcher/Worker-$i")) {
                 for ((task, deferred) in queue) {
                     if (deferred.isCompleted) continue
                     supervisorScope {

@@ -18,13 +18,14 @@ import nala.rlq.retry.Retry
  * from which queued tasks are consumed and dispatched to a shared pool of [workers] worker coroutines.
  * All buckets are executed in parallel, whereas tasks within a given bucket are executed sequentially.
  *
+ * @param parentScope the parent [CoroutineScope] to use for child coroutines
  * @param workers the amount of shared worker coroutines to launch
  */
 @ExperimentalRateLimitApi
-class CoroutineRateLimitQueue(scope: CoroutineScope, val workers: Int) : RateLimitQueue {
+class CoroutineRateLimitQueue(parentScope: CoroutineScope, val workers: Int) : RateLimitQueue {
 
-    private val queueJob = SupervisorJob(scope.coroutineContext[Job])
-    private val scope = scope + queueJob
+    private val queueJob = SupervisorJob(parentScope.coroutineContext[Job])
+    private val scope = parentScope + queueJob
     private val dispatcher = WorkerPoolDispatcher(workers, queueJob)
 
     private val buckets = HashMap<Any, Bucket>()
@@ -33,7 +34,7 @@ class CoroutineRateLimitQueue(scope: CoroutineScope, val workers: Int) : RateLim
     private val queue = Channel<QueuedTask<*>>(Channel.RENDEZVOUS)
 
     init {
-        scope.launch(context = CoroutineName("DefaultRateLimitQueue")) {
+        scope.launch(context = CoroutineName("CoroutineRateLimitQueue/Slurper")) {
             for (queued in queue) {
                 bucketMutex.withLock {
                     val bucket = buckets.getOrPut(queued.task.bucket) { Bucket(queued.task.bucket) }
@@ -82,7 +83,7 @@ class CoroutineRateLimitQueue(scope: CoroutineScope, val workers: Int) : RateLim
         private val delayJob = atomic<Job>(Job().also { it.complete() })
 
         init {
-            bucketScope.launch(context = CoroutineName("DefaultRateLimitQueue#Bucket-$bucketKey")) {
+            bucketScope.launch(context = CoroutineName("CoroutineRateLimitQueue/Bucket-$bucketKey")) {
                 for (queued in bucketQueue) {
                     @Suppress("UNCHECKED_CAST")
                     val result = tryDispatch(queued.task as RateLimitTask<Any?>)
