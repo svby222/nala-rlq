@@ -1,6 +1,5 @@
 package nala.rlq
 
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -29,7 +28,7 @@ class WorkerPoolDispatcherTest {
     fun testDispose() = runTest {
         var executed = false
 
-        val job = GlobalScope.launch {
+        val job = launch {
             dispatcher.submit(object : SuspendingTask<Unit> {
                 override suspend fun invoke() {
                     delay(200L)
@@ -49,7 +48,7 @@ class WorkerPoolDispatcherTest {
     fun testSubmitCancel() = runTest {
         var executed = false
 
-        val job = GlobalScope.launch {
+        val job = launch {
             dispatcher.submit(object : SuspendingTask<Unit> {
                 override suspend fun invoke() {
                     delay(200L)
@@ -103,10 +102,9 @@ class WorkerPoolDispatcherTest {
     @[Test PlatformIgnore]
     fun testCancelFuture() = runTest {
         WorkerPoolDispatcher(1).use { singleDispatcher ->
-
             var executed = false
 
-            GlobalScope.launch {
+            launch {
                 singleDispatcher.submit(object : SuspendingTask<Unit> {
                     override suspend fun invoke() {
                         delay(300L)

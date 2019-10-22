@@ -1,5 +1,7 @@
 package nala.common.test
 
+import kotlinx.coroutines.CoroutineScope
+
 /**
  * Marks a function as a test.
  *
@@ -18,4 +20,4 @@ expect annotation class PlatformIgnore()
  * On the JVM platform, this is implemented by `runBlocking`.
  * As there is no similar method on the JS platform, its implementation does nothing.
  */
-expect inline fun runTest(crossinline block: suspend () -> Unit)
+expect inline fun runTest(crossinline block: suspend CoroutineScope.() -> Unit)

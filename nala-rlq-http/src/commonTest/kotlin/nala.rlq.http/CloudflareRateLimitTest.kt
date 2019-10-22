@@ -3,8 +3,8 @@ package nala.rlq.http
 import io.ktor.client.HttpClient
 import io.ktor.client.response.HttpResponse
 import io.ktor.http.HttpStatusCode
-import kotlinx.coroutines.GlobalScope
 import nala.common.internal.currentTimeMillis
+import nala.common.internal.use
 import nala.common.test.runTest
 import nala.rlq.*
 import kotlin.test.Ignore
@@ -28,32 +28,32 @@ class CloudflareRateLimitTest {
         var index = 0
         val delay = 100 * 1000L
 
-        val queue = CoroutineRateLimitQueue(GlobalScope, 4)
+        CoroutineRateLimitQueue(this, 4).use { queue ->
+            val task = HttpTask.head(client, "https://www.cloudflare.com/rate-limit-test/")
+                    .map<HttpResponse, RateLimitResult<Pair<Boolean, HttpStatusCode>>> {
+                        val remaining = 9 - index % 10
+                        index++
 
-        val task = HttpTask.head(client, "https://www.cloudflare.com/rate-limit-test/")
-                .map<HttpResponse, RateLimitResult<Pair<Boolean, HttpStatusCode>>> {
-                    val remaining = 9 - index % 10
-                    index++
+                        val data =
+                                if (remaining == 0) RateLimitData(it.responseTime.timestamp, false, 0, currentTimeMillis() + delay)
+                                else null
 
-                    val data =
-                            if (remaining == 0) RateLimitData(it.responseTime.timestamp, false, 0, currentTimeMillis() + delay)
-                            else null
-
-                    // Always return success in order to fail fast
-                    when (it.status) {
-                        HttpStatusCode.TooManyRequests -> RateLimitResult.Success(Pair(false, it.status), data)
-                        else -> {
-                            if (it.status.value in 400..599) RateLimitResult.Success(Pair(false, it.status), data)
-                            else RateLimitResult.Success(Pair(true, it.status), data)
+                        // Always return success in order to fail fast
+                        when (it.status) {
+                            HttpStatusCode.TooManyRequests -> RateLimitResult.Success(Pair(false, it.status), data)
+                            else -> {
+                                if (it.status.value in 400..599) RateLimitResult.Success(Pair(false, it.status), data)
+                                else RateLimitResult.Success(Pair(true, it.status), data)
+                            }
                         }
                     }
-                }
-                .withBucket(RateLimitTask.GlobalBucket)
+                    .withBucket(RateLimitTask.GlobalBucket)
 
-        repeat(requests) {
-            val (ok, status) = queue.submit(task)
-            if (!ok) throw AssertionError("Request ${it + 1} was not successful: $status")
-            else println("Request ${it + 1} was successful")
+            repeat(requests) {
+                val (ok, status) = queue.submit(task)
+                if (!ok) throw AssertionError("Request ${it + 1} was not successful: $status")
+                else println("Request ${it + 1} was successful")
+            }
         }
     }
 

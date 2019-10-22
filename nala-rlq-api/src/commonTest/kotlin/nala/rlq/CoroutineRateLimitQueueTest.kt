@@ -1,8 +1,7 @@
 package nala.rlq
 
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
 import nala.common.internal.currentTimeMillis
+import nala.common.internal.use
 import nala.common.test.PlatformIgnore
 import nala.common.test.runTest
 import kotlin.test.Test
@@ -13,28 +12,28 @@ class CoroutineRateLimitQueueTest {
 
     @[Test PlatformIgnore]
     fun test() = runTest {
-        val queue = CoroutineRateLimitQueue(GlobalScope, 4)
+        CoroutineRateLimitQueue(this, 4).use { queue ->
+            val now = currentTimeMillis()
+            val delay = 1000
 
-        val now = currentTimeMillis()
-        val delay = 1000
+            var index = 0
 
-        var index = 0
+            val timestamps = mutableListOf<Long>()
 
-        val timestamps = mutableListOf<Long>()
+            val task = suspendingTask {
+                // delay(500L)
+                timestamps.add(currentTimeMillis())
+                println("Completed task ${index + 1}")
+                index++
+            }
+                    .map { RateLimitResult.Success(it, RateLimitData(now, false, 4 - it % 5, now + delay * (1 + it / 5))) }
+                    .withBucket()
 
-        val task = suspendingTask {
-            // delay(500L)
-            timestamps.add(currentTimeMillis())
-            println("Completed task ${index + 1}")
-            index++
+            repeat(11) { queue.submit(task) }
+
+            assertTrue(timestamps[5] - now >= delay)
+            assertTrue(timestamps[10] - now >= delay * 2)
         }
-                .map { RateLimitResult.Success(it, RateLimitData(now, false, 4 - it % 5, now + delay * (1 + it / 5))) }
-                .withBucket()
-
-        repeat(11) { queue.submit(task) }
-
-        assertTrue(timestamps[5] - now >= delay)
-        assertTrue(timestamps[10] - now >= delay * 2)
     }
 
 }
