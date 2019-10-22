@@ -1,17 +1,19 @@
 package nala.rlq
 
+import kotlinx.coroutines.delay
 import nala.common.internal.currentTimeMillis
 import nala.common.internal.use
 import nala.common.test.PlatformIgnore
 import nala.common.test.runTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @UseExperimental(ExperimentalRateLimitApi::class)
 class CoroutineRateLimitQueueTest {
 
     @[Test PlatformIgnore]
-    fun test() = runTest {
+    fun testWithManualClient() = runTest {
         CoroutineRateLimitQueue(this, 4).use { queue ->
             val now = currentTimeMillis()
             val delay = 1000
@@ -21,9 +23,7 @@ class CoroutineRateLimitQueueTest {
             val timestamps = mutableListOf<Long>()
 
             val task = suspendingTask {
-                // delay(500L)
                 timestamps.add(currentTimeMillis())
-                println("Completed task ${index + 1}")
                 index++
             }
                     .map { RateLimitResult.Success(it, RateLimitData(now, false, 4 - it % 5, now + delay * (1 + it / 5))) }
@@ -33,6 +33,22 @@ class CoroutineRateLimitQueueTest {
 
             assertTrue(timestamps[5] - now >= delay)
             assertTrue(timestamps[10] - now >= delay * 2)
+        }
+    }
+
+    @[Test PlatformIgnore]
+    fun testWithMockClient() = runTest {
+        val host = MockRateLimitHost(maxRequests = 3, interval = 500L)
+        val task = suspendingTask { host.request() }.withBucket(RateLimitTask.GlobalBucket)
+
+        CoroutineRateLimitQueue(this, 4).use { queue ->
+            repeat(4) { queue.submit(task) }
+            assertEquals(0, host.violations)
+
+            delay(500L)
+
+            repeat(4) { queue.submit(task) }
+            assertEquals(0, host.violations)
         }
     }
 

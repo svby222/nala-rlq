@@ -78,25 +78,21 @@ class WorkerPoolDispatcherTest {
 
     @[Test PlatformIgnore]
     fun testSubmitMultiple() = runTest {
+        var executed = 0
+
         suspend fun submit() {
             dispatcher.submit(object : SuspendingTask<Unit> {
                 override suspend fun invoke() {
                     delay(Random.nextLong(100L))
+                    executed++
                 }
             })
         }
         coroutineScope {
-            launch { submit() }
-            launch { submit() }
-            launch { submit() }
-            launch { submit() }
-            launch { submit() }
-            launch { submit() }
-            launch { submit() }
-            launch { submit() }
-            launch { submit() }
-            launch { submit() }
+            repeat(10) { launch { submit() } }
         }
+
+        assertEquals(10, executed)
     }
 
     @[Test PlatformIgnore]
