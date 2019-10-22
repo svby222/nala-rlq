@@ -13,5 +13,5 @@ cache:
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/
 
-script:
-  - ./gradlew -x jsTest -x jsNodeTest -x jsBrowserTest clean build jvmTest
+install: ./gradlew --parallel assemble
+script: ./gradlew --parallel jvmTest

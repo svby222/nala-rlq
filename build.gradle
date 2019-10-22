@@ -27,15 +27,26 @@ allprojects {
 subprojects {
     apply plugin: 'org.jetbrains.kotlin.multiplatform'
     apply plugin: 'kotlinx-atomicfu'
+    apply plugin: 'java'
 
     kotlin {
-        targets.all {
+        jvm { compilations.all { kotlinOptions.jvmTarget = "1.8" } }
+
+        js {
             compilations.all {
                 kotlinOptions {
-                    freeCompilerArgs += [
-                            '-Xuse-experimental=kotlin.Experimental'
-                    ]
+                    sourceMap = true
+                    moduleKind = "umd"
+                    metaInfo = true
+                    main = "noCall"
                 }
+            }
+        }
+
+        sourceSets.all {
+            languageSettings {
+                progressiveMode = true
+                useExperimentalAnnotation("kotlin.Experimental")
             }
         }
     }
