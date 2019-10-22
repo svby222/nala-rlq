@@ -1,6 +1,6 @@
 # rlq
 
-![Build status (Travis)](https://travis-ci.org/friiday/nala-rlq.svg?branch=master)
+[![Build status (Travis)](https://travis-ci.org/friiday/nala-rlq.svg?branch=master)](https://travis-ci.org/friiday/nala-rlq)
 
 A LGPLv3 dynamic task dispatching library for clients of rate-limited services.
 
