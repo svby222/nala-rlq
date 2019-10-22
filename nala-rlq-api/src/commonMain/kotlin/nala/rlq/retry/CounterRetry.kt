@@ -16,7 +16,7 @@ import nala.rlq.RateLimitTask
 class CounterRetry(count: Int) : Retry {
 
     init {
-        require(count > 0)
+        require(count > 0) { "count must be positive" }
     }
 
     private val remaining = atomic(count)

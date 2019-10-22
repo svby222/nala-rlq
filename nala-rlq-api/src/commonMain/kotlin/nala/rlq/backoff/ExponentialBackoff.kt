@@ -14,8 +14,8 @@ import nala.rlq.ExperimentalRateLimitApi
 class ExponentialBackoff(val initialValue: Long, val factor: Int = 2, val maxValue: Long = Long.MAX_VALUE) : Backoff {
 
     init {
-        require(factor > 1)
-        require(initialValue > 0)
+        require(factor > 1) { "factor must be > 1" }
+        require(initialValue > 0) { "initialValue must be positive" }
     }
 
     override fun generateSequence() = sequence {
