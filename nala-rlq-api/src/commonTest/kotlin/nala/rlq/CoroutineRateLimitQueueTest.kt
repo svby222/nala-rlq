@@ -1,6 +1,8 @@
 package nala.rlq
 
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import nala.common.internal.currentTimeMillis
 import nala.common.internal.use
 import nala.common.test.PlatformIgnore
@@ -63,10 +65,12 @@ class CoroutineRateLimitQueueTest {
         
         task()
 
-        val futures = List(3) { queue.submitAsync(task, CounterRetry(1)) }
+        val jobs = List(3) { launch { queue.submit(task, CounterRetry(1)) } }
         queue.dispose()
 
-        assertTrue(futures.all { it.isCancelled })
+        withTimeout(5000L) { jobs.forEach { it.join() } }
+
+        assertTrue(jobs.all { it.isCancelled })
     }
 
 }

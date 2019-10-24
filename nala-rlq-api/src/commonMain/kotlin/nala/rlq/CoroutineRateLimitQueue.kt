@@ -55,9 +55,6 @@ class CoroutineRateLimitQueue(parentScope: CoroutineScope, val workers: Int) : R
         }
     }
 
-    override fun <TData> submitAsync(task: RateLimitTask<TData>, retry: Retry?, backoff: Backoff?) =
-            scope.async { submit(task, retry, backoff) }
-
     private data class QueuedTask<T>(
             val task: RateLimitTask<T>,
             val deferred: CompletableDeferred<T>,

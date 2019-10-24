@@ -110,18 +110,20 @@ class WorkerPoolDispatcherTest {
 
             delay(100L)
 
-            val future = singleDispatcher.submitAsync(object : SuspendingTask<Unit> {
-                override suspend fun invoke() {
-                    delay(200L)
-                    executed = true
-                }
-            })
+            val job = launch {
+                singleDispatcher.submit(object : SuspendingTask<Unit> {
+                    override suspend fun invoke() {
+                        delay(200L)
+                        executed = true
+                    }
+                })
+            }
 
-            future.cancel()
+            job.cancel()
 
             delay(1000L)
 
-            assertTrue(future.isCancelled)
+            assertTrue(job.isCancelled)
             assertFalse(executed)
         }
     }

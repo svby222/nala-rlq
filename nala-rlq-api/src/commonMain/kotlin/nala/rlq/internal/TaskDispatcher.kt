@@ -32,16 +32,6 @@ internal interface TaskDispatcher : Disposable {
     suspend fun <T> submit(task: SuspendingTask<T>): T
 
     /**
-     * Submits the [task] for execution to this dispatcher.
-     * The returned [Deferred] may be cancelled to cancel the task.
-     *
-     * @return a [Deferred] job holding the future result of the [task].
-     *
-     * @see submit
-     */
-    fun <T> submitAsync(task: SuspendingTask<T>): Deferred<T>
-
-    /**
      * Closes this task dispatcher and cancels all tasks.
      *
      * This function is idempotent;

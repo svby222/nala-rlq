@@ -56,8 +56,6 @@ internal class WorkerPoolDispatcher(workers: Int, parentJob: Job? = null) : Task
         }
     }
 
-    override fun <T> submitAsync(task: SuspendingTask<T>) = scope.async { submit(task) }
-
     override fun dispose() {
         scope.cancel()
     }

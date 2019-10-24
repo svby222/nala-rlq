@@ -40,19 +40,6 @@ interface RateLimitQueue : Disposable {
     suspend fun <TData> submit(task: RateLimitTask<TData>, retry: Retry? = null, backoff: Backoff? = null): TData
 
     /**
-     * Submits the [task] to this queue with the specified [retry] and [backoff] strategies.
-     * The returned [Deferred] may be cancelled to cancel the task and remove it from this queue.
-     *
-     * @param retry the retry instance.
-     *  If it is `null`, the task will never be resubmitted.
-     * @param backoff the backoff strategy.
-     *  If it is `null`, in the event of a retry the task will be resubmitted immediately.
-     *
-     * @return a [Deferred] job holding the future result of the [task].
-     */
-    fun <TData> submitAsync(task: RateLimitTask<TData>, retry: Retry? = null, backoff: Backoff? = null): Deferred<TData>
-
-    /**
      * Closes this rate-limit queue and cancels all queued tasks.
      *
      * This function is idempotent;
