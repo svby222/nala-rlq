@@ -179,6 +179,7 @@ class CoroutineRateLimitQueue(parentScope: CoroutineScope, val workers: Int) : R
 
     override fun dispose() {
         scope.cancel()
+        queue.close()
     }
 
 }

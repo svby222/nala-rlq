@@ -58,6 +58,7 @@ internal class WorkerPoolDispatcher(workers: Int, parentJob: Job? = null) : Task
 
     override fun dispose() {
         scope.cancel()
+        queue.close()
     }
 
 }

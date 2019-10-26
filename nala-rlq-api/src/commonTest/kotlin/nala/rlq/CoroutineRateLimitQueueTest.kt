@@ -1,20 +1,20 @@
 package nala.rlq
 
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.*
 import nala.common.internal.currentTimeMillis
 import nala.common.internal.use
 import nala.common.test.PlatformIgnore
 import nala.common.test.runTest
 import nala.rlq.retry.CounterRetry
-import nala.rlq.retry.InfiniteRetry
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @UseExperimental(ExperimentalRateLimitApi::class)
 class CoroutineRateLimitQueueTest {
+
+    // region Functionality
 
     @[Test PlatformIgnore]
     fun testWithManualClient() = runTest {
@@ -56,21 +56,72 @@ class CoroutineRateLimitQueueTest {
         }
     }
 
+    // endregion
+
+    // region Cancellation
+
     @[Test PlatformIgnore]
-    fun testDisposeCleanup() = runTest {
+    fun testCancelSubmit() = runTest {
+        val task = suspendingTask {
+            delay(Long.MAX_VALUE)
+            RateLimitResult.Success(Unit, null)
+        }.withBucket(RateLimitTask.GlobalBucket)
+
+        val queue = CoroutineRateLimitQueue(this, 4)
+
+        lateinit var submitJob: Deferred<*>
+        queue.use { queue ->
+            withTimeout(5000L) {
+                supervisorScope {
+                    submitJob = async { queue.submit(task) }
+                    submitJob.cancel()
+                }
+            }
+        }
+
+        assertFailsWith<CancellationException> { submitJob.await() }
+    }
+
+    @[Test PlatformIgnore]
+    fun testDisposeCancelSubmit() = runTest {
+        val task = suspendingTask {
+            delay(Long.MAX_VALUE)
+            RateLimitResult.Success(Unit, null)
+        }.withBucket(RateLimitTask.GlobalBucket)
+
+        val queue = CoroutineRateLimitQueue(this, 4)
+
+        lateinit var submitJob: Deferred<*>
+        withTimeout(5000L) {
+            supervisorScope {
+                submitJob = async { queue.submit(task, CounterRetry(1)) }
+                queue.dispose()
+            }
+        }
+
+        assertFailsWith<IllegalStateException> { submitJob.await() }
+    }
+
+    @[Test PlatformIgnore]
+    fun testDisposeCancelFuture() = runTest {
         val host = MockRateLimitHost(maxRequests = 1, interval = 99999L)
         val task = suspendingTask { host.request() }.withBucket(RateLimitTask.GlobalBucket)
 
         val queue = CoroutineRateLimitQueue(this, 4)
-        
+
         task()
 
-        val jobs = List(3) { launch { queue.submit(task, CounterRetry(1)) } }
-        queue.dispose()
-
-        withTimeout(5000L) { jobs.forEach { it.join() } }
+        lateinit var jobs: List<Job>
+        withTimeout(5000L) {
+            supervisorScope {
+                jobs = List(3) { launch { queue.submit(task, CounterRetry(1)) } }
+                queue.dispose()
+            }
+        }
 
         assertTrue(jobs.all { it.isCancelled })
     }
+
+    // endregion
 
 }
