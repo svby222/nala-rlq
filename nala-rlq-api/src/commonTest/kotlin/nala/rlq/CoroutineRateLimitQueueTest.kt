@@ -6,53 +6,86 @@ import nala.common.internal.use
 import nala.common.test.PlatformIgnore
 import nala.common.test.runTest
 import nala.rlq.retry.CounterRetry
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
+import kotlin.test.*
 
+/**
+ * Tests for [CoroutineRateLimitQueue].
+ *
+ * These tests should verify:
+ *  - correct dispatching
+ *  - correct suspension/waiting
+ *  - correct cancellation handling
+ */
 @UseExperimental(ExperimentalRateLimitApi::class)
 class CoroutineRateLimitQueueTest {
 
     // region Functionality
 
+    /**
+     * This test verifies a queue's ability to correctly dispatch tasks and wait for rate limits to expire.
+     *
+     * Test specification:
+     *
+     *     GIVEN: an empty queue, a task with bucket limit x = 3
+     *     WHEN:  the task is submitted 2x + 1 times where x = the bucket limit
+     *     AND    execution timestamps are recorded
+     *     THEN:  the task is executed 2x + 1 times
+     *     AND    the timestamps of tasks x + 1 and 2x + 1 indicate correct backoff
+     */
     @[Test PlatformIgnore]
     fun testWithManualClient() = runTest {
-        CoroutineRateLimitQueue(this, 4).use { queue ->
-            val now = currentTimeMillis()
-            val delay = 1000
+        // GIVEN
+        val now = currentTimeMillis()
 
-            var index = 0
+        val queue = CoroutineRateLimitQueue(this, 1)
 
-            val timestamps = mutableListOf<Long>()
+        val limit = 3
+        val interval = 500
 
-            val task = suspendingTask {
-                timestamps.add(currentTimeMillis())
-                index++
-            }
-                    .map { RateLimitResult.Success(it, RateLimitData(now, false, 4 - it % 5, now + delay * (1 + it / 5))) }
-                    .withBucket()
+        val timestamps = mutableListOf<Long>()
 
-            repeat(11) { queue.submit(task) }
-
-            assertTrue(timestamps[5] - now >= delay)
-            assertTrue(timestamps[10] - now >= delay * 2)
+        val taskGenerator = { index: Int ->
+            suspendingTask { timestamps.add(currentTimeMillis()) }.map {
+                val remaining = (limit - 1) - index % limit
+                val resetMillis = now + interval * (1 + index / limit)
+                RateLimitResult.Success(index, RateLimitData(now, false, remaining, resetMillis))
+            }.withBucket(RateLimitTask.GlobalBucket)
         }
+
+        // WHEN
+        queue.use { repeat(2 * limit + 1) { queue.submit(taskGenerator(it)) } }
+
+        // THEN
+        assertTrue(timestamps[limit] - now >= interval)
+        assertTrue(timestamps[2 * limit] - now >= interval * 2)
     }
 
+    /**
+     * This test verifies a queue's ability to correctly wait for rate limits to expire.
+     *
+     * Test specification:
+     *
+     *     GIVEN: an empty queue, a mock rate-limit host with maxRequests = 3 and a client task
+     *     WHEN:  the task is submitted maxRequests + 1 times, twice
+     *     THEN:  no rate-limit violations are recorded by the host
+     */
     @[Test PlatformIgnore]
     fun testWithMockClient() = runTest {
+        // GIVEN
+        val queue = CoroutineRateLimitQueue(this, 4)
         val host = MockRateLimitHost(maxRequests = 3, interval = 500L)
         val task = suspendingTask { host.request() }.withBucket(RateLimitTask.GlobalBucket)
 
-        CoroutineRateLimitQueue(this, 4).use { queue ->
-            repeat(4) { queue.submit(task) }
-            assertEquals(0, host.violations)
+        queue.use {
+            repeat(2) {
+                // WHEN
+                repeat(4) { queue.submit(task) }
 
-            delay(500L)
+                // THEN
+                assertEquals(0, host.violations)
 
-            repeat(4) { queue.submit(task) }
-            assertEquals(0, host.violations)
+                delay(500L)
+            }
         }
     }
 
@@ -60,17 +93,29 @@ class CoroutineRateLimitQueueTest {
 
     // region Cancellation
 
+    /**
+     * This test verifies a queue's ability to cancel suspending calls to [submit][RateLimitQueue.submit]
+     *
+     * Test specification:
+     *
+     *     GIVEN: an empty queue, a task that blocks forever
+     *     WHEN:  the task is submitted
+     *     AND    the coroutine that submitted the task is cancelled
+     *     THEN:  the job fails
+     */
     @[Test PlatformIgnore]
     fun testCancelSubmit() = runTest {
+        // GIVEN
+        val queue = CoroutineRateLimitQueue(this, 1)
+
         val task = suspendingTask {
             delay(Long.MAX_VALUE)
             RateLimitResult.Success(Unit, null)
         }.withBucket(RateLimitTask.GlobalBucket)
 
-        val queue = CoroutineRateLimitQueue(this, 4)
-
+        // WHEN
         lateinit var submitJob: Deferred<*>
-        queue.use { queue ->
+        queue.use {
             withTimeout(5000L) {
                 supervisorScope {
                     submitJob = async { queue.submit(task) }
@@ -79,46 +124,78 @@ class CoroutineRateLimitQueueTest {
             }
         }
 
+        // THEN
         assertFailsWith<CancellationException> { submitJob.await() }
     }
 
+    /**
+     * This test verifies a queue's ability to correctly dispose of its resources and cancel the currently dispatched
+     * task.
+     *
+     * Test specification:
+     *
+     *     GIVEN: an empty queue, a task that blocks forever
+     *     WHEN:  the task is submitted
+     *     AND    the queue is disposed
+     *     THEN:  the job fails
+     */
     @[Test PlatformIgnore]
     fun testDisposeCancelSubmit() = runTest {
+        // GIVEN
+        val queue = CoroutineRateLimitQueue(this, 1)
+
         val task = suspendingTask {
             delay(Long.MAX_VALUE)
             RateLimitResult.Success(Unit, null)
         }.withBucket(RateLimitTask.GlobalBucket)
 
-        val queue = CoroutineRateLimitQueue(this, 4)
-
+        // WHEN
         lateinit var submitJob: Deferred<*>
         withTimeout(5000L) {
             supervisorScope {
-                submitJob = async { queue.submit(task, CounterRetry(1)) }
+                submitJob = async { queue.submit(task) }
                 queue.dispose()
             }
         }
 
+        // THEN
         assertFailsWith<IllegalStateException> { submitJob.await() }
     }
 
+    /**
+     * This test verifies a queue's ability to correctly dispose of its resources and cancel scheduled (i.e. future)
+     * tasks.
+     *
+     * Test specification:
+     *
+     *     GIVEN: an empty queue, a task that blocks forever
+     *     WHEN:  the task is submitted to block the queue
+     *     AND    the task is submitted again
+     *     AND    the queue is disposed
+     *     THEN:  all tasks fail
+     */
     @[Test PlatformIgnore]
     fun testDisposeCancelFuture() = runTest {
-        val host = MockRateLimitHost(maxRequests = 1, interval = 99999L)
-        val task = suspendingTask { host.request() }.withBucket(RateLimitTask.GlobalBucket)
+        // GIVEN
+        val queue = CoroutineRateLimitQueue(this, 1)
 
-        val queue = CoroutineRateLimitQueue(this, 4)
+        val task = suspendingTask {
+            delay(Long.MAX_VALUE)
+            RateLimitResult.Success(Unit, null)
+        }.withBucket(RateLimitTask.GlobalBucket)
 
-        task()
-
+        // WHEN
         lateinit var jobs: List<Job>
         withTimeout(5000L) {
             supervisorScope {
-                jobs = List(3) { launch { queue.submit(task, CounterRetry(1)) } }
+                launch { queue.submit(task) }
+
+                jobs = List(3) { launch { queue.submit(task) } }
                 queue.dispose()
             }
         }
 
+        // THEN
         assertTrue(jobs.all { it.isCancelled })
     }
 
