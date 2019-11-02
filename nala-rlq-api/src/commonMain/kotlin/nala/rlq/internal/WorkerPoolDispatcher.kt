@@ -25,20 +25,17 @@ internal class WorkerPoolDispatcher(workers: Int, parentJob: Job? = null) : Task
             scope.launch(context = CoroutineName("WorkerPoolDispatcher/Worker-$i")) {
                 for ((task, deferred) in queue) {
                     if (deferred.isCompleted) continue
-                    supervisorScope {
-                        try {
-                            val result = withContext(deferred) { task.invoke() }
 
-                            // This cast is fine since the signature of [submit] guarantees
-                            // that the job and the task are of compatible types.
-                            @Suppress("UNCHECKED_CAST")
-                            (deferred as CompletableDeferred<Any?>).complete(result)
-                        } catch (e: CancellationException) {
-                            deferred.completeExceptionally(e)
-                            throw e
-                        } catch (e: Throwable) {
-                            deferred.completeExceptionally(e)
-                        }
+                    try {
+                        val result = withContext(deferred) { task.invoke() }
+
+                        // This cast is fine since the signature of [submit] guarantees
+                        // that the job and the task are of compatible types.
+                        @Suppress("UNCHECKED_CAST")
+                        (deferred as CompletableDeferred<Any?>).complete(result)
+                    } catch (e: Throwable) {
+                        deferred.completeExceptionally(e)
+                        // throw e
                     }
                 }
             }

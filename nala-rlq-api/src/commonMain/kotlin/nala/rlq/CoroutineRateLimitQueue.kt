@@ -82,21 +82,30 @@ class CoroutineRateLimitQueue(parentScope: CoroutineScope, val workers: Int) : R
         init {
             bucketScope.launch(context = CoroutineName("CoroutineRateLimitQueue/Bucket-$bucketKey")) {
                 for (queued in bucketQueue) {
+                    if (queued.deferred.isCompleted) continue
+
                     @Suppress("UNCHECKED_CAST")
-                    val result = tryDispatch(queued.task as RateLimitTask<Any?>)
+                    queued as QueuedTask<Any?>
+
+                    val result =
+                            try {
+                                withContext(queued.deferred) { tryDispatchImpl(queued.task) }
+                            } catch (e: Throwable) {
+                                if (queued.deferred.isCancelled) continue
+                                RateLimitResult.Failure.Exception(e)
+                            }
 
                     result.rateLimit?.let { updateData(BucketData(it)) }
 
-                    @Suppress("UNCHECKED_CAST")
                     when (result) {
-                        is RateLimitResult.Success -> (queued.deferred as CompletableDeferred<Any?>).complete(result.data)
-                        is RateLimitResult.Failure -> tryResubmit(queued, result)
+                        is RateLimitResult.Success -> queued.deferred.complete(result.data)
+                        is RateLimitResult.Failure -> tryResubmitImpl(queued, result)
                     }
                 }
             }
         }
 
-        private suspend fun <T> tryDispatch(task: RateLimitTask<T>): RateLimitResult<T> {
+        private suspend fun <T> tryDispatchImpl(task: RateLimitTask<T>): RateLimitResult<T> {
             while (true) {
                 val data = this.data.value
 
@@ -128,10 +137,16 @@ class CoroutineRateLimitQueue(parentScope: CoroutineScope, val workers: Int) : R
             }
         }
 
-        private fun tryResubmit(queued: QueuedTask<*>, failure: RateLimitResult.Failure<*>) {
+        private fun tryResubmitImpl(queued: QueuedTask<*>, failure: RateLimitResult.Failure<*>) {
+            if (queued.deferred.isCompleted) return
+
             if (queued.retry?.shouldRetry(queued.task, failure) != true) {
                 // Cancel the task
-                queued.deferred.cancel()
+                when (failure) {
+                    is RateLimitResult.Failure.Exception -> queued.deferred.completeExceptionally(failure.exception)
+                    // TODO special exception to better indicate the root cause?
+                    else -> queued.deferred.cancel()
+                }
                 return
             }
 

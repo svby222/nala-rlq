@@ -1,8 +1,6 @@
 package nala.rlq
 
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import nala.common.internal.use
 import nala.common.test.PlatformIgnore
 import nala.common.test.runTest
@@ -126,6 +124,30 @@ class WorkerPoolDispatcherTest {
             assertTrue(job.isCancelled)
             assertFalse(executed)
         }
+    }
+
+    @[Test PlatformIgnore]
+    fun testFailureHandling() = runTest {
+        val dispatcher = WorkerPoolDispatcher(1)
+
+        var executed = false
+        dispatcher.use {
+            supervisorScope {
+                launch {
+                    dispatcher.submit(suspendingTask<Unit> { throw Exception() })
+                }
+            }
+
+            delay(50L)
+
+            supervisorScope {
+                launch {
+                    dispatcher.submit(suspendingTask { executed = true })
+                }
+            }
+        }
+
+        assertTrue(executed)
     }
 
 }

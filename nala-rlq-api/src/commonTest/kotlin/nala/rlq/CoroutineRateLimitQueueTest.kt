@@ -5,7 +5,6 @@ import nala.common.internal.currentTimeMillis
 import nala.common.internal.use
 import nala.common.test.PlatformIgnore
 import nala.common.test.runTest
-import nala.rlq.retry.CounterRetry
 import kotlin.test.*
 
 /**
@@ -129,6 +128,43 @@ class CoroutineRateLimitQueueTest {
     }
 
     /**
+     * This test verifies a queue's ability to cancel suspending calls to [submit][RateLimitQueue.submit]
+     *
+     * Test specification:
+     *
+     *     GIVEN: an empty queue, a task that blocks forever
+     *     WHEN:  the task is submitted
+     *     AND    the coroutine that submitted the task is cancelled
+     *     THEN:  the task does not complete
+     */
+    @[Test PlatformIgnore]
+    fun testCancelSubmitIsNotExecuted() = runTest {
+        // GIVEN
+        val queue = CoroutineRateLimitQueue(this, 1)
+
+        var executed = false
+        val task = suspendingTask {
+            delay(500L)
+            executed = true
+            RateLimitResult.Success(Unit, null)
+        }.withBucket(RateLimitTask.GlobalBucket)
+
+        // WHEN
+        lateinit var submitJob: Deferred<*>
+        queue.use {
+            supervisorScope {
+                submitJob = async { queue.submit(task) }
+                delay(50L)
+                submitJob.cancel()
+                delay(500L)
+            }
+        }
+
+        // THEN
+        assertFalse(executed)
+    }
+
+    /**
      * This test verifies a queue's ability to correctly dispose of its resources and cancel the currently dispatched
      * task.
      *
@@ -197,6 +233,42 @@ class CoroutineRateLimitQueueTest {
 
         // THEN
         assertTrue(jobs.all { it.isCancelled })
+    }
+
+    // endregion
+
+    // region Error handling
+
+    /**
+     * This test verifies that a queue remains active after a task has failed.
+     *
+     * Test specification:
+     *
+     *     GIVEN: an empty queue, a failing task, a task
+     *     WHEN:  the failing task is submitted and allowed to throw an exception
+     *     AND    the second task is submitted
+     *     THEN:  the first task fails
+     *     AND    the second task is completed
+     */
+    @[Test PlatformIgnore]
+    fun testFailureHandling() = runTest {
+        val queue = CoroutineRateLimitQueue(this, 1)
+
+        var executed = false
+        queue.use {
+            assertFailsWith<Exception> {
+                queue.submit(suspendingTask { throw Exception() }.withBucket(RateLimitTask.GlobalBucket))
+            }
+
+            delay(50L)
+
+            queue.submit(suspendingTask {
+                executed = true
+                RateLimitResult.Success(Unit, null)
+            }.withBucket(RateLimitTask.GlobalBucket))
+        }
+
+        assertTrue(executed)
     }
 
     // endregion
